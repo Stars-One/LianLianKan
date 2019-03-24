@@ -1,11 +1,16 @@
 package wigget;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import sun.audio.AudioPlayer;
+import sun.audio.AudioStream;
 import util.ArrayUtils;
 
 /**
@@ -74,10 +79,7 @@ public class GamePanel extends JPanel {
             imageButton.setPictureFlag(flag);//设置图片的标志
             imageButtons.add(imageButton);
         }
-        
-        for (wigget.ImageButton imageButton : imageButtons) {
-            System.out.println(imageButton.getPictureFlag());
-        }
+
         imgWidth = imgHeight = imageButtons.get(0).getHeight();
 
         init();
@@ -117,8 +119,8 @@ public class GamePanel extends JPanel {
 
                     if (clickImageButtons.size() != 2) {
                         clickImageButtons.add(imageButton);
+                        playClickWav();//播放点击音效
                         imageButton.repaintBorder();
-                        System.out.println("单击" + imageButton.getX() + "," + imageButton.getY());
                         //判断是否满足条件
                         if (isCanDelete(clickImageButtons)) {
                             hideImageButton(clickImageButtons);//清除
@@ -127,24 +129,50 @@ public class GamePanel extends JPanel {
                     }
 
                 });
-                System.out.println(System.identityHashCode(imageButton));
                 add(imageButton);//如果要添加的对象已存在，则不会添加进去
                 k++;
 
             }
         }
+        setOpaque(false);
     }
 
+    private void playClickWav() {
+        new Thread(() -> {
+            try {
+                AudioStream audioStream = new AudioStream(new FileInputStream("." + File.separator + "res" + File.separator + "music" + File.separator + "clickMusic.wav"));
+                AudioPlayer.player.start(audioStream);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    //播放消除的爆炸音效
+    private void playBoomWav() {
+        new Thread(() -> {
+            try {
+                AudioStream audioStream = new AudioStream(new FileInputStream("." + File.separator + "res" + File.separator + "music" + File.separator + "boom.wav"));
+                AudioPlayer.player.start(audioStream);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
     /**
      * 消除图片
      *
      * @param clickImageButtons
      */
     private void hideImageButton(List<wigget.ImageButton> clickImageButtons) {
-        for (wigget.ImageButton clickImageButton : clickImageButtons) {
-            clickImageButton.setBorder(null);
-            clickImageButton.setVisible(false);
-            clickImageButton.setExist(false);//删除，将当前图片设置为不存在
+        ImageButton imageButton1 = clickImageButtons.get(0);
+        ImageButton imageButton2 = clickImageButtons.get(1);
+        playBoomWav();//播放消除的爆炸音效
+        try {
+            imageButton1.imageBoom();
+            imageButton2.imageBoom();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -152,7 +180,7 @@ public class GamePanel extends JPanel {
     private boolean isCanDelete(List<wigget.ImageButton> clickImageButtons) {
         //选中的图片有两个以及这两个图片都是相同的
         if (clickImageButtons.size() == 2 && isPictureSame(clickImageButtons)) {
-            return lineHorizontal(clickImageButtons) || lineVertical(clickImageButtons)||turnOnce(clickImageButtons)||turnTwice(clickImageButtons);
+            return lineHorizontal(clickImageButtons) || lineVertical(clickImageButtons) || turnOnce(clickImageButtons) || turnTwice(clickImageButtons);
         }
         return false;
     }
@@ -177,7 +205,7 @@ public class GamePanel extends JPanel {
         int rowIndexB = imageButtonB.getRowIndex();
         int colIndexB = imageButtonB.getColIndex();
 
-        return lineVertical(rowIndexA,colIndexA,rowIndexB,colIndexB);
+        return lineVertical(rowIndexA, colIndexA, rowIndexB, colIndexB);
     }
 
     /**
@@ -194,11 +222,12 @@ public class GamePanel extends JPanel {
         int rowIndexB = imageButtonB.getRowIndex();
         int colIndexB = imageButtonB.getColIndex();
 
-        return lineHorizontal(rowIndexA,colIndexA,rowIndexB,colIndexB);
+        return lineHorizontal(rowIndexA, colIndexA, rowIndexB, colIndexB);
     }
 
     /**
      * 两个点水平方向是否可以直接连接
+     *
      * @param rowIndexA x1
      * @param colIndexA y1
      * @param rowIndexB x2
@@ -228,6 +257,7 @@ public class GamePanel extends JPanel {
 
     /**
      * 两个点垂直方向是否可以直接连接
+     *
      * @param rowIndexA
      * @param colIndexA
      * @param rowIndexB
@@ -256,6 +286,7 @@ public class GamePanel extends JPanel {
 
     /**
      * 两个点在一个拐点能够连接
+     *
      * @param clickImageButtons
      * @return
      */
@@ -266,12 +297,13 @@ public class GamePanel extends JPanel {
         int colIndexA = imageButtonA.getColIndex();
         int rowIndexB = imageButtonB.getRowIndex();
         int colIndexB = imageButtonB.getColIndex();
-        return turnOnce(rowIndexA,colIndexA,rowIndexB,colIndexB);
+        return turnOnce(rowIndexA, colIndexA, rowIndexB, colIndexB);
 
     }
 
     /**
      * 判断两个点是否在一个拐点就能够直接连接
+     *
      * @param rowIndexA
      * @param colIndexA
      * @param rowIndexB
@@ -289,7 +321,7 @@ public class GamePanel extends JPanel {
         boolean ret = false;
         //如果没有障碍物
         if (!isPictureExist(c_x, c_y)) {
-            ret = lineHorizontal(rowIndexA, colIndexA, c_x,c_y) || lineVertical(c_x, c_y, rowIndexB, colIndexB);
+            ret = lineHorizontal(rowIndexA, colIndexA, c_x, c_y) || lineVertical(c_x, c_y, rowIndexB, colIndexB);
         }
         if (!isPictureExist(d_x, d_y)) {
             ret = lineHorizontal(rowIndexA, colIndexA, d_x, d_y) || lineVertical(d_x, d_y, rowIndexB, colIndexB);
@@ -297,6 +329,7 @@ public class GamePanel extends JPanel {
         }
         return ret;
     }
+
     /**
      * 坐标x，坐标y是否还存在有图片，行坐标和纵坐标
      *
@@ -315,6 +348,7 @@ public class GamePanel extends JPanel {
 
     /**
      * 两个拐点，图片是否能够直接相连
+     *
      * @param clickImageButtons
      * @return
      */
@@ -325,12 +359,13 @@ public class GamePanel extends JPanel {
         int colIndexA = imageButtonA.getColIndex();
         int rowIndexB = imageButtonB.getRowIndex();
         int colIndexB = imageButtonB.getColIndex();
-        return turnTwice(rowIndexA,colIndexA,rowIndexB,colIndexB);
+        return turnTwice(rowIndexA, colIndexA, rowIndexB, colIndexB);
 
     }
 
     /**
      * 两个点在两个拐点是否能够直接相连
+     *
      * @param x1
      * @param y1
      * @param x2
@@ -338,36 +373,28 @@ public class GamePanel extends JPanel {
      * @return
      */
     private boolean turnTwice(int x1, int y1, int x2, int y2) {
-        if (x1 == x2 && y1 == y2)
-        {
+        if (x1 == x2 && y1 == y2) {
             return false;
         }
 
-        for (int i = 0; i < rows; i++)
-        {
-            for (int j = 0; j < cols; j++)
-            {
-                if (i != x1 && i != x2 && j != y1 && j != y2)
-                {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (i != x1 && i != x2 && j != y1 && j != y2) {
                     continue;
                 }
 
-                if ((i == x1 && j == y1) || (i == x2 && j == y2))
-                {
+                if ((i == x1 && j == y1) || (i == x2 && j == y2)) {
                     continue;
                 }
 
-                if (isPictureExist(i, j))
-                {
+                if (isPictureExist(i, j)) {
                     continue;
                 }
 
-                if (turnOnce(x1, y1, i, j) && (lineHorizontal(i, j, x2, y2) || lineVertical(i, j, x2, y2)))
-                {
+                if (turnOnce(x1, y1, i, j) && (lineHorizontal(i, j, x2, y2) || lineVertical(i, j, x2, y2))) {
                     return true;
                 }
-                if (turnOnce(i, j, x2, y2) && (lineHorizontal(x1, y1, i, j) || lineVertical(x1, y1, i, j)))
-                {
+                if (turnOnce(i, j, x2, y2) && (lineHorizontal(x1, y1, i, j) || lineVertical(x1, y1, i, j))) {
                     return true;
                 }
 

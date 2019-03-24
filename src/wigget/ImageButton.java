@@ -1,6 +1,7 @@
 package wigget;
 
 import java.awt.*;
+import java.io.File;
 import java.util.Objects;
 
 import javax.swing.BorderFactory;
@@ -14,21 +15,21 @@ import javax.swing.JButton;
  */
 public class ImageButton extends JButton {
     private String imagePath;
-    private int width,height;
+    private int width, height;
     private ImageIcon imageIcon;
-    private int rowIndex,colIndex;//行下标，纵坐标
+    private int rowIndex, colIndex;//行下标，纵坐标
     private int pictureFlag;//图片标识
     private boolean exist;//当前图片是否存在
 
     public ImageButton() {
         super();
     }
+
     /**
-     *
      * @param imagePath 图片名.统一为png格式
      */
     public ImageButton(String imagePath) {
-        width=height=60;
+        width = height = 60;
         this.imagePath = imagePath;
         dealImageIcon();//对图片进行处理
         setIcon(imageIcon);//设置图片
@@ -41,8 +42,39 @@ public class ImageButton extends JButton {
 
     private void dealImageIcon() {
         ImageIcon imageIcon = new ImageIcon(imagePath);
-        imageIcon.setImage(imageIcon.getImage().getScaledInstance(width,height, 1));//按照指定宽高进行图片的缩放
+        imageIcon.setImage(imageIcon.getImage().getScaledInstance(width, height, 1));//按照指定宽高进行图片的缩放
         this.imageIcon = imageIcon;
+    }
+
+    /**
+     * 图片消除时的爆炸效果
+     * @throws InterruptedException
+     */
+    public void imageBoom() throws InterruptedException {
+        setBorder(null);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 15; i++) {
+                    ImageIcon imageIcon = new ImageIcon("." + File.separator + "res" + File.separator + "boom" + File.separator + "boom_" + i + ".png");
+                    setIcon(imageIcon);
+                    try {
+                        Thread.sleep(150);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    repaint();
+                }
+                try {
+                    Thread.sleep(150);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                setVisible(false);
+                setExist(false);//删除，将当前图片设置为不存在
+            }
+        }).start();
+
     }
 
     public String getImagePath() {
@@ -72,13 +104,12 @@ public class ImageButton extends JButton {
     }
 
 
-
     public void setImageIcon(ImageIcon imageIcon) {
         this.imageIcon = imageIcon;
     }
 
     public void repaintBorder() {
-        setBorder(BorderFactory.createLineBorder(Color.green));
+        setBorder(BorderFactory.createLineBorder(Color.RED));
 
     }
 
@@ -86,7 +117,7 @@ public class ImageButton extends JButton {
         return imageIcon;
     }
 
-    public void setIndex(int rowIndex,int colIndex) {
+    public void setIndex(int rowIndex, int colIndex) {
         setRowIndex(rowIndex);
         setColIndex(colIndex);
     }
